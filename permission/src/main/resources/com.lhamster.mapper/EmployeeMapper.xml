@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.lhamster.mapper.EmployeeMapper">
+    <resultMap id="BaseResultMap" type="com.lhamster.domain.Employee">
+        <id column="e_id" property="eId" jdbcType="BIGINT"/>
+        <result column="username" property="username" jdbcType="VARCHAR"/>
+        <result column="inputtime" property="inputtime" jdbcType="TIMESTAMP"/>
+        <result column="tel" property="tel" jdbcType="VARCHAR"/>
+        <result column="email" property="email" jdbcType="VARCHAR"/>
+        <result column="state" property="state" jdbcType="BIT"/>
+        <result column="admin" property="admin" jdbcType="BIT"/>
+        <association property="department" javaType="Department" columnPrefix="d_">
+            <id property="eId" column="e_id"/>
+            <result property="name" column="name"/>
+        </association>
+    </resultMap>
+    <delete id="deleteByPrimaryKey" parameterType="java.lang.Long">
+    delete from employee
+    where e_id = #{eId,jdbcType=BIGINT}
+  </delete>
+    <delete id="deleteRel">
+        delete from `emp_role_rel` where emp_id = #{eId}
+    </delete>
+    <insert id="insert" parameterType="com.lhamster.domain.Employee"
+            useGeneratedKeys="true" keyProperty="eId" keyColumn="e_id">
+    insert into employee (e_id,password, username, inputtime,
+      tel, email, state, admin, 
+      department_id)
+    values (#{eId,jdbcType=BIGINT}, #{password,jdbcType=VARCHAR},#{username,jdbcType=VARCHAR}, #{inputtime,jdbcType=TIMESTAMP},
+      #{tel,jdbcType=VARCHAR}, #{email,jdbcType=VARCHAR}, #{state,jdbcType=BIT}, #{admin,jdbcType=BIT}, 
+      #{department.eId,jdbcType=BIGINT})
+  </insert>
+    <insert id="insertEmploy_Role_rel">
+        insert into `emp_role_rel`(emp_id,role_id)
+        values (#{eId},#{roleId})
+    </insert>
+    <update id="updateByPrimaryKey" parameterType="com.lhamster.domain.Employee">
+    update employee
+    set username = #{username,jdbcType=VARCHAR},
+      inputtime = #{inputtime,jdbcType=TIMESTAMP},
+      tel = #{tel,jdbcType=VARCHAR},
+      email = #{email,jdbcType=VARCHAR},
+      admin = #{admin,jdbcType=BIT},
+      department_id = #{department.eId,jdbcType=BIGINT}
+    where e_id = #{eId,jdbcType=BIGINT}
+  </update>
+    <update id="updateState" parameterType="java.lang.Long">
+        update employee set state = false where e_id = #{id}
+    </update>
+    <select id="selectByPrimaryKey" resultMap="BaseResultMap" parameterType="java.lang.Long">
+    select e_id, username, inputtime, tel, email, state, admin, department_id
+    from employee
+    where e_id = #{eId,jdbcType=BIGINT}
+  </select>
+
+    <!--sql片段-->
+    <sql id="query_search">
+        <where>
+            <if test="keyword != null and keyword != ''">
+                and
+                username like concat('%',#{keyword},'%')
+                or tel like concat('%',#{keyword},'%')
+                or email like concat('%',#{keyword},'%')
+            </if>
+        </where>
+    </sql>
+    <select id="selectAll" resultMap="BaseResultMap">
+        select e.e_id, username, inputtime, tel, email, state, admin,
+        d.e_id as d_e_id,
+        d.`name` as `d_name`
+        from employee as e LEFT JOIN department as d
+        ON e.department_id = d.e_id
+        <include refid="query_search"/>
+    </select>
+    <select id="getRoleById" resultType="java.lang.Long">
+        select `role_id` from `emp_role_rel` where emp_id = #{eId};
+    </select>
+
+    <resultMap id="BaseResultMap2" type="com.lhamster.domain.Employee">
+        <id column="e_id" property="eId" jdbcType="BIGINT"/>
+    </resultMap>
+    <select id="getEmployeeByUsername" resultMap="BaseResultMap2">
+        select * from `employee` where username= #{username}
+    </select>
+
+    <!--根据员工id获取角色的的编号-->
+    <select id="getRolesById" resultType="java.lang.String">
+        SELECT role_num FROM `emp_role_rel`
+        LEFT JOIN `role`
+        ON emp_role_rel.role_id = role.role_id
+        WHERE emp_role_rel.emp_id = #{eId}
+    </select>
+    <select id="getPermissionsById" resultType="java.lang.String">
+        SELECT DISTINCT permission.per_resource FROM `role_permission_rel`
+        LEFT JOIN permission
+        ON role_permission_rel.per_id = permission.per_id
+        WHERE role_permission_rel.role_id in (SELECT role_id FROM `emp_role_rel` WHERE emp_id = #{eId})
+    </select>
+    <select id="getAllEmployee" resultMap="BaseResultMap">
+        select e.e_id, username, inputtime, tel, email, state, admin,
+        d.e_id as d_e_id,
+        d.`name` as `d_name`
+        from employee as e LEFT JOIN department as d
+        ON e.department_id = d.e_id
+    </select>
+</mapper>

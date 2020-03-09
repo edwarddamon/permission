@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.lhamster.mapper.MenuMapper" >
+  <resultMap id="BaseResultMap" type="com.lhamster.domain.Menu" >
+    <id column="id" property="id" jdbcType="BIGINT" />
+    <result column="text" property="text" jdbcType="VARCHAR" />
+    <result column="url" property="url" jdbcType="VARCHAR" />
+
+      <association property="parent" javaType="com.lhamster.domain.Menu" columnPrefix="m_">
+          <id property="id" column="id"/>
+          <result property="text" column="text"/>
+          <result property="url" column="url"/>
+      </association>
+
+      <association property="permission" javaType="com.lhamster.domain.Permission">
+          <id property="perId" column="per_id"/>
+          <result property="perName" column="per_name"/>
+          <result property="perResource" column="per_resource"/>
+      </association>
+
+      <collection property="children"
+                  ofType="com.lhamster.domain.Menu"
+                  select="com.lhamster.mapper.MenuMapper.getChildren"
+                  column="id"></collection>
+
+  </resultMap>
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.Long" >
+    delete from menu
+    where id = #{id,jdbcType=BIGINT}
+  </delete>
+    <delete id="deleteMenu">
+        delete from `menu` where id = #{id}
+    </delete>
+    <insert id="insert" parameterType="com.lhamster.domain.Menu" >
+    insert into menu (id, text, url, 
+      parent_id)
+    values (#{id,jdbcType=BIGINT}, #{text,jdbcType=VARCHAR}, #{url,jdbcType=VARCHAR}, 
+      #{parent.id,jdbcType=BIGINT})
+  </insert>
+  <update id="updateByPrimaryKey" parameterType="com.lhamster.domain.Menu" >
+    update menu
+    set text = #{text,jdbcType=VARCHAR},
+      url = #{url,jdbcType=VARCHAR},
+      parent_id = #{parent.id,jdbcType=BIGINT}
+    where id = #{id,jdbcType=BIGINT}
+  </update>
+    <update id="breakRelation">
+        update `menu` set parent_id = null where parent_id = #{id}
+    </update>
+    <select id="selectByPrimaryKey" resultMap="BaseResultMap" parameterType="java.lang.Long" >
+    select id, text, url, parent_id
+    from menu
+    where id = #{id,jdbcType=BIGINT}
+  </select>
+  <select id="selectAll" resultMap="BaseResultMap" >
+    SELECT m1.id,m1.text,m1.url,
+    m2.id as m_id,
+    m2.text AS m_text,
+    m2.url AS m_url
+    FROM menu AS m1
+    LEFT JOIN menu AS	m2
+    ON m1.parent_id = m2.id
+  </select>
+    <select id="selectParentId" resultType="java.lang.Long">
+        select parent_id from `menu` where id = #{pId}
+    </select>
+    <!--查找树形结构
+        分步查询：1、查询根节点
+                  2、查询子节点封装进children中
+    -->
+    <select id="getTreeData" resultMap="BaseResultMap">
+        SELECT * FROM menu
+        LEFT JOIN permission
+        ON menu.permission_id = permission.per_id where parent_id is null
+    </select>
+    <!--查询子菜单-->
+    <select id="getChildren" resultMap="BaseResultMap">
+        SELECT * FROM menu
+        LEFT JOIN permission
+        ON menu.permission_id = permission.per_id where  parent_id = #{id}
+    </select>
+</mapper>
